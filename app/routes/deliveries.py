@@ -5,6 +5,7 @@ from app.dependencies.dependencies import get_current_user, require_roles
 from app.models.models import User, Delivery
 from app.models import UserRole, DeliveryStatus, DeliveryType
 from app.schemas.schemas import DeliveryCreate, DeliveryUpdate, DeliveryAssign, Delivery as DeliverySchema
+from app.routes.websockets import manager
 
 router = APIRouter(prefix="/deliveries", tags=["deliveries"])
 
@@ -65,12 +66,20 @@ def assign_delivery(
     delivery.statut = DeliveryStatus.EN_ROUTE_PICKUP
     db.commit()
     db.refresh(delivery)
+    # Broadcast assignment
+    import asyncio
+    asyncio.create_task(manager.broadcast({
+        "type": "assigned",
+        "delivery_id": delivery.id,
+        "livreur_id": livreur.id,
+        "status": delivery.statut.value
+    }))
     return {"message": "Course assignée", "delivery_id": delivery.id}
 
 @router.post("/{delivery_id}/status", response_model=DeliverySchema)
 def update_status(
     delivery_id: int,
-    update: DeliverySchemaUpdate,
+    update: DeliveryUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -94,6 +103,13 @@ def update_status(
     delivery.statut = update.statut
     db.commit()
     db.refresh(delivery)
+    # Broadcast status update
+    import asyncio
+    asyncio.create_task(manager.broadcast({
+        "type": "status_update",
+        "delivery_id": delivery.id,
+        "status": delivery.statut.value
+    }))
     return delivery
 
 @router.get("/history", response_model=list[DeliverySchema])

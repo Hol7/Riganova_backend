@@ -21,8 +21,11 @@ services:
   # API FastAPI
   api:
     build: .
+    env_file:
+      - .env
     container_name: livraison_api
     environment:
+      # DATABASE_URL: postgresql://livraison_user:livraison_pass@db:5432/livraison_db
       DATABASE_URL: postgresql://livraison_user:livraison_pass@db:5432/livraison_db
       SECRET_KEY: your-super-secret-key-change-this-in-production
       ALGORITHM: HS256

@@ -2,27 +2,12 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.database.database import get_db
-from app.auth.auth import verify_token
+from app.auth.auth import get_current_user, get_current_active_user, get_admin_user
 from app.models.models import User, UserRole
 
 # Configuration du bearer token
 security = HTTPBearer()
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-):
-    """Obtenir l'utilisateur actuel à partir du token"""
-    token = credentials.credentials
-    user_id = verify_token(token)
-    
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Utilisateur non trouvé"
-        )
-    return user
 
 def require_role(required_role: UserRole):
     """Décorateur pour exiger un rôle spécifique"""
