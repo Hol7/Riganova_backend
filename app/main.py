@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.database.database import engine, get_db
-from app.routes import auth, deliveries, users
+from app.routes import auth, deliveries, users, zones
 from app.routes import websockets
 from app.models.models import User, Delivery, DeliveryStatus
 
@@ -28,6 +28,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(deliveries.router)
 app.include_router(users.router)
+app.include_router(zones.router)
 app.include_router(websockets.router)
 
 @app.get("/")

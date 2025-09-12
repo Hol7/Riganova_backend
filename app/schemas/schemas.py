@@ -65,3 +65,27 @@ class Delivery(BaseModel):
 class DeliveryWithUsers(Delivery):
     client: User
     livreur: Optional[User] = None
+
+# Schémas pour les zones de livraison
+class ZoneCreate(BaseModel):
+    nom_zone: str
+    area: str
+    prix: float
+
+class ZoneUpdate(BaseModel):
+    nom_zone: Optional[str] = None
+    area: Optional[str] = None
+    prix: Optional[float] = None
+    is_active: Optional[bool] = None
+
+class Zone(BaseModel):
+    id: int
+    nom_zone: str
+    area: str
+    prix: float
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True

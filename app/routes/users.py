@@ -19,3 +19,21 @@ def list_users(
 ):
     return db.query(User).all()
 
+@router.get("/clients", response_model=list[UserSchema])
+def list_clients(
+    db: Session = Depends(get_db),
+    manager: User = Depends(require_roles([UserRole.MANAGER, UserRole.ADMIN]))
+):
+    """List all clients for assignment purposes"""
+    clients = db.query(User).filter(User.role == UserRole.CLIENT).all()
+    return clients
+
+@router.get("/livreurs", response_model=list[UserSchema])
+def list_livreurs(
+    db: Session = Depends(get_db),
+    manager: User = Depends(require_roles([UserRole.MANAGER, UserRole.ADMIN]))
+):
+    """List all livreurs for assignment purposes"""
+    livreurs = db.query(User).filter(User.role == UserRole.LIVREUR).all()
+    return livreurs
+
