@@ -1,0 +1,302 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Livraison API - Complete Collection",
+    "description": "Complete API collection for delivery management system with all endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"telephone\": \"0600000000\",\n  \"mot_de_passe\": \"strongpassword\",\n  \"adresse\": \"123 rue de Paris\",\n  \"role\": \"client\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', response.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "john@example.com" },
+                { "key": "password", "value": "strongpassword" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/auth/token", "host": ["{{base_url}}"], "path": ["auth", "token"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users Management",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/users/me", "host": ["{{base_url}}"], "path": ["users", "me"] }
+          }
+        },
+        {
+          "name": "List All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/users/", "host": ["{{base_url}}"], "path": ["users"] }
+          }
+        },
+        {
+          "name": "List Clients (Manager/Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/users/clients", "host": ["{{base_url}}"], "path": ["users", "clients"] }
+          }
+        },
+        {
+          "name": "List Livreurs (Manager/Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/users/livreurs", "host": ["{{base_url}}"], "path": ["users", "livreurs"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deliveries Management",
+      "item": [
+        {
+          "name": "Create Delivery (Client)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type_colis\": \"colis\",\n  \"description\": \"Un colis important\",\n  \"adresse_pickup\": \"10 rue A, Paris\",\n  \"adresse_dropoff\": \"20 rue B, Lyon\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/deliveries/create", "host": ["{{base_url}}"], "path": ["deliveries", "create"] }
+          }
+        },
+        {
+          "name": "Get My Deliveries (Client)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/deliveries/my-deliveries", "host": ["{{base_url}}"], "path": ["deliveries", "my-deliveries"] }
+          }
+        },
+        {
+          "name": "Cancel Delivery (Client)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/deliveries/1/cancel", "host": ["{{base_url}}"], "path": ["deliveries", "1", "cancel"] }
+          }
+        },
+        {
+          "name": "Assign Delivery (Manager/Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"livreur_id\": 3\n}"
+            },
+            "url": { "raw": "{{base_url}}/deliveries/1/assign", "host": ["{{base_url}}"], "path": ["deliveries", "1", "assign"] }
+          }
+        },
+        {
+          "name": "Update Delivery Status (Livreur/Manager)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"en_route_livraison\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/deliveries/1/status", "host": ["{{base_url}}"], "path": ["deliveries", "1", "status"] }
+          }
+        },
+        {
+          "name": "Get Delivery Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/deliveries/1/status", "host": ["{{base_url}}"], "path": ["deliveries", "1", "status"] }
+          }
+        },
+        {
+          "name": "Get All Deliveries (Manager/Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/deliveries/all", "host": ["{{base_url}}"], "path": ["deliveries", "all"] }
+          }
+        },
+        {
+          "name": "Get Delivery History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/deliveries/history", "host": ["{{base_url}}"], "path": ["deliveries", "history"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Zones Management",
+      "item": [
+        {
+          "name": "Create Zone (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom_zone\": \"Paris Centre\",\n  \"area\": \"1er, 2ème, 3ème, 4ème arrondissements\",\n  \"prix\": 15.50\n}"
+            },
+            "url": { "raw": "{{base_url}}/zones/", "host": ["{{base_url}}"], "path": ["zones"] }
+          }
+        },
+        {
+          "name": "List All Zones",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/zones/", "host": ["{{base_url}}"], "path": ["zones"] }
+          }
+        },
+        {
+          "name": "Get Zone Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/zones/1", "host": ["{{base_url}}"], "path": ["zones", "1"] }
+          }
+        },
+        {
+          "name": "Update Zone (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom_zone\": \"Paris Centre Étendu\",\n  \"area\": \"1er au 6ème arrondissements\",\n  \"prix\": 18.00\n}"
+            },
+            "url": { "raw": "{{base_url}}/zones/1", "host": ["{{base_url}}"], "path": ["zones", "1"] }
+          }
+        },
+        {
+          "name": "Delete Zone (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/zones/1", "host": ["{{base_url}}"], "path": ["zones", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "System & Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "Root Endpoint",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/", "host": ["{{base_url}}"], "path": [""] }
+          }
+        },
+        {
+          "name": "Get Stats (Admin/Manager)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/stats", "host": ["{{base_url}}"], "path": ["stats"] }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "access_token", "value": "" }
+  ]
+}
