@@ -4,7 +4,7 @@ from app.database.database import get_db
 from app.dependencies.dependencies import get_current_user, require_roles
 from app.models.models import User, Delivery
 from app.models import UserRole, DeliveryStatus, DeliveryType
-from app.schemas.schemas import DeliveryCreate, DeliveryUpdate, DeliveryAssign, Delivery as DeliverySchema
+from app.schemas.schemas import DeliveryCreate, DeliveryUpdate, DeliveryAssign, Delivery as DeliverySchema, DeliveryWithClientInfo
 from app.routes.websockets import manager
 
 router = APIRouter(prefix="/deliveries", tags=["deliveries"])
@@ -67,14 +67,30 @@ def assign_delivery(
     db.commit()
     db.refresh(delivery)
     # Broadcast assignment
-    import asyncio
-    from app.routes.websockets import manager as websocket_manager
-    asyncio.create_task(websocket_manager.broadcast({
-        "type": "assigned",
-        "delivery_id": delivery.id,
-        "livreur_id": livreur.id,
-        "status": delivery.statut.value
-    }))
+    try:
+        from app.routes.websockets import manager as websocket_manager
+        import asyncio
+        import threading
+        
+        def broadcast_in_background():
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(websocket_manager.broadcast({
+                    "type": "assigned",
+                    "delivery_id": delivery.id,
+                    "livreur_id": livreur.id,
+                    "status": delivery.statut.value
+                }))
+                loop.close()
+            except Exception as e:
+                print(f"WebSocket broadcast error: {e}")
+        
+        thread = threading.Thread(target=broadcast_in_background)
+        thread.daemon = True
+        thread.start()
+    except Exception as e:
+        print(f"WebSocket setup error: {e}")
     return {"message": "Course assignée", "delivery_id": delivery.id}
 
 @router.post("/{delivery_id}/status", response_model=DeliverySchema)
@@ -105,13 +121,29 @@ def update_status(
     db.commit()
     db.refresh(delivery)
     # Broadcast status update
-    import asyncio
-    from app.routes.websockets import manager as websocket_manager
-    asyncio.create_task(websocket_manager.broadcast({
-        "type": "status_update",
-        "delivery_id": delivery.id,
-        "status": delivery.statut.value
-    }))
+    try:
+        from app.routes.websockets import manager as websocket_manager
+        import asyncio
+        import threading
+        
+        def broadcast_in_background():
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(websocket_manager.broadcast({
+                    "type": "status_update",
+                    "delivery_id": delivery.id,
+                    "status": delivery.statut.value
+                }))
+                loop.close()
+            except Exception as e:
+                print(f"WebSocket broadcast error: {e}")
+        
+        thread = threading.Thread(target=broadcast_in_background)
+        thread.daemon = True
+        thread.start()
+    except Exception as e:
+        print(f"WebSocket setup error: {e}")
     return delivery
 
 @router.get("/my-deliveries", response_model=list[DeliverySchema])
@@ -140,7 +172,7 @@ def cancel_delivery(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Cancel delivery if not yet assigned"""
+    """Cancel delivery - clients can cancel unassigned deliveries, managers/admins can cancel any delivery"""
     delivery = db.query(Delivery).filter(Delivery.id == delivery_id).first()
     if not delivery:
         raise HTTPException(
@@ -148,31 +180,57 @@ def cancel_delivery(
             detail="Livraison introuvable"
         )
     
-    # Only client who created it can cancel
-    if delivery.client_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Vous ne pouvez annuler que vos propres livraisons"
-        )
-    
-    # Can only cancel if not assigned yet
-    if delivery.livreur_id is not None:
+    # Check if delivery is already cancelled or delivered
+    if delivery.statut in [DeliveryStatus.ANNULE, DeliveryStatus.LIVRE]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Impossible d'annuler une livraison déjà assignée"
+            detail="Impossible d'annuler une livraison déjà terminée"
+        )
+    
+    # Permission checks
+    is_client_owner = current_user.role == UserRole.CLIENT and delivery.client_id == current_user.id
+    is_manager_admin = current_user.role in [UserRole.MANAGER, UserRole.ADMIN]
+    
+    if not (is_client_owner or is_manager_admin):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accès refusé"
+        )
+    
+    # Clients can only cancel unassigned deliveries, managers/admins can cancel any
+    if current_user.role == UserRole.CLIENT and delivery.livreur_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Impossible d'annuler une livraison déjà assignée. Contactez un manager."
         )
     
     delivery.statut = DeliveryStatus.ANNULE
     db.commit()
     
     # Broadcast cancellation
-    import asyncio
-    from app.routes.websockets import manager as websocket_manager
-    asyncio.create_task(websocket_manager.broadcast({
-        "type": "cancelled",
-        "delivery_id": delivery.id,
-        "status": delivery.statut.value
-    }))
+    try:
+        from app.routes.websockets import manager as websocket_manager
+        import asyncio
+        import threading
+        
+        def broadcast_in_background():
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(websocket_manager.broadcast({
+                    "type": "cancelled",
+                    "delivery_id": delivery.id,
+                    "status": delivery.statut.value
+                }))
+                loop.close()
+            except Exception as e:
+                print(f"WebSocket broadcast error: {e}")
+        
+        thread = threading.Thread(target=broadcast_in_background)
+        thread.daemon = True
+        thread.start()
+    except Exception as e:
+        print(f"WebSocket setup error: {e}")
     
     return {"message": "Livraison annulée avec succès"}
 
@@ -207,24 +265,160 @@ def get_delivery_status(
         "updated_at": delivery.updated_at
     }
 
-@router.get("/history", response_model=list[DeliverySchema])
+@router.get("/", response_model=list[DeliveryWithClientInfo])
+def get_deliveries(
+    db: Session = Depends(get_db),
+    manager: User = Depends(require_roles([UserRole.MANAGER, UserRole.ADMIN]))
+):
+    """Get all deliveries with client and livreur contact info"""
+    deliveries = (
+        db.query(
+            Delivery.id,
+            Delivery.type_colis,
+            Delivery.description,
+            Delivery.adresse_pickup,
+            Delivery.adresse_dropoff,
+            Delivery.statut,
+            Delivery.prix,
+            Delivery.client_id,
+            User.nom.label('client_nom'),
+            User.telephone.label('client_telephone'),
+            Delivery.livreur_id,
+            Delivery.created_at,
+            Delivery.updated_at
+        )
+        .join(User, Delivery.client_id == User.id)
+        .all()
+    )
+    
+    result = []
+    for delivery in deliveries:
+        # Get livreur info if exists
+        livreur_nom = None
+        livreur_telephone = None
+        if delivery.livreur_id:
+            livreur = db.query(User).filter(User.id == delivery.livreur_id).first()
+            if livreur:
+                livreur_nom = livreur.nom
+                livreur_telephone = livreur.telephone
+        
+        result.append(DeliveryWithClientInfo(
+            id=delivery.id,
+            type_colis=delivery.type_colis,
+            description=delivery.description,
+            adresse_pickup=delivery.adresse_pickup,
+            adresse_dropoff=delivery.adresse_dropoff,
+            statut=delivery.statut,
+            prix=delivery.prix,
+            client_id=delivery.client_id,
+            client_nom=delivery.client_nom,
+            client_telephone=delivery.client_telephone,
+            livreur_id=delivery.livreur_id,
+            livreur_nom=livreur_nom,
+            livreur_telephone=livreur_telephone,
+            created_at=delivery.created_at,
+            updated_at=delivery.updated_at
+        ))
+    
+    return result
+
+@router.get("/history", response_model=list[DeliveryWithClientInfo])
 def get_history(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
+    """Get delivery history with client and livreur contact info"""
     if current_user.role == UserRole.CLIENT:
         deliveries = (
-            db.query(Delivery)
+            db.query(
+                Delivery.id,
+                Delivery.type_colis,
+                Delivery.description,
+                Delivery.adresse_pickup,
+                Delivery.adresse_dropoff,
+                Delivery.statut,
+                Delivery.prix,
+                Delivery.client_id,
+                User.nom.label('client_nom'),
+                User.telephone.label('client_telephone'),
+                Delivery.livreur_id,
+                Delivery.created_at,
+                Delivery.updated_at
+            )
+            .join(User, Delivery.client_id == User.id)
             .filter(Delivery.client_id == current_user.id)
             .all()
         )
     elif current_user.role == UserRole.LIVREUR:
         deliveries = (
-            db.query(Delivery)
+            db.query(
+                Delivery.id,
+                Delivery.type_colis,
+                Delivery.description,
+                Delivery.adresse_pickup,
+                Delivery.adresse_dropoff,
+                Delivery.statut,
+                Delivery.prix,
+                Delivery.client_id,
+                User.nom.label('client_nom'),
+                User.telephone.label('client_telephone'),
+                Delivery.livreur_id,
+                Delivery.created_at,
+                Delivery.updated_at
+            )
+            .join(User, Delivery.client_id == User.id)
             .filter(Delivery.livreur_id == current_user.id)
             .all()
         )
     elif current_user.role in [UserRole.MANAGER, UserRole.ADMIN]:
-        deliveries = db.query(Delivery).all()
+        deliveries = (
+            db.query(
+                Delivery.id,
+                Delivery.type_colis,
+                Delivery.description,
+                Delivery.adresse_pickup,
+                Delivery.adresse_dropoff,
+                Delivery.statut,
+                Delivery.prix,
+                Delivery.client_id,
+                User.nom.label('client_nom'),
+                User.telephone.label('client_telephone'),
+                Delivery.livreur_id,
+                Delivery.created_at,
+                Delivery.updated_at
+            )
+            .join(User, Delivery.client_id == User.id)
+            .all()
+        )
     else:
         deliveries = []
-    return deliveries
+    
+    result = []
+    for delivery in deliveries:
+        # Get livreur info if exists
+        livreur_nom = None
+        livreur_telephone = None
+        if delivery.livreur_id:
+            livreur = db.query(User).filter(User.id == delivery.livreur_id).first()
+            if livreur:
+                livreur_nom = livreur.nom
+                livreur_telephone = livreur.telephone
+        
+        result.append(DeliveryWithClientInfo(
+            id=delivery.id,
+            type_colis=delivery.type_colis,
+            description=delivery.description,
+            adresse_pickup=delivery.adresse_pickup,
+            adresse_dropoff=delivery.adresse_dropoff,
+            statut=delivery.statut,
+            prix=delivery.prix,
+            client_id=delivery.client_id,
+            client_nom=delivery.client_nom,
+            client_telephone=delivery.client_telephone,
+            livreur_id=delivery.livreur_id,
+            livreur_nom=livreur_nom,
+            livreur_telephone=livreur_telephone,
+            created_at=delivery.created_at,
+            updated_at=delivery.updated_at
+        ))
+    
+    return result

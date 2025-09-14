@@ -62,6 +62,26 @@ class Delivery(BaseModel):
     class Config:
         from_attributes = True
 
+class DeliveryWithClientInfo(BaseModel):
+    id: int
+    type_colis: DeliveryType
+    description: Optional[str]
+    adresse_pickup: str
+    adresse_dropoff: str
+    statut: DeliveryStatus
+    prix: int
+    client_id: int
+    client_nom: str
+    client_telephone: str
+    livreur_id: Optional[int]
+    livreur_nom: Optional[str] = None
+    livreur_telephone: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
 class DeliveryWithUsers(Delivery):
     client: User
     livreur: Optional[User] = None
