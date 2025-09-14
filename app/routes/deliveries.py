@@ -32,6 +32,39 @@ def create_delivery(
     db.add(delivery)
     db.commit()
     db.refresh(delivery)
+    
+    # Broadcast new delivery creation
+    try:
+        from app.routes.websockets import manager as websocket_manager
+        import asyncio
+        import threading
+        
+        def broadcast_in_background():
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(websocket_manager.broadcast({
+                    "type": "new_delivery",
+                    "delivery_id": delivery.id,
+                    "client_id": delivery.client_id,
+                    "client_nom": current_user.nom,
+                    "client_telephone": current_user.telephone,
+                    "type_colis": delivery.type_colis.value,
+                    "adresse_pickup": delivery.adresse_pickup,
+                    "adresse_dropoff": delivery.adresse_dropoff,
+                    "status": delivery.statut.value,
+                    "created_at": delivery.created_at.isoformat()
+                }))
+                loop.close()
+            except Exception as e:
+                print(f"WebSocket broadcast error: {e}")
+        
+        thread = threading.Thread(target=broadcast_in_background)
+        thread.daemon = True
+        thread.start()
+    except Exception as e:
+        print(f"WebSocket setup error: {e}")
+    
     return delivery
 
 @router.post("/{delivery_id}/assign")
