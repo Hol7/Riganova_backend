@@ -25,7 +25,24 @@ def subscribe_to_delivery_webhooks(
     current_user: User = Depends(require_roles([UserRole.MANAGER, UserRole.ADMIN]))
 ):
     """Subscribe to delivery webhook events"""
+    import re
+    
     valid_events = ["delivery_created", "delivery_assigned", "delivery_status_changed", "delivery_cancelled"]
+    
+    # Validate webhook URL format
+    url_pattern = re.compile(
+        r'^https?://'  # http:// or https://
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
+        r'localhost|'  # localhost...
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+        r'(?::\d+)?'  # optional port
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+    
+    if not url_pattern.match(webhook_url):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid webhook URL format. Must be a valid HTTP/HTTPS URL (localhost allowed for development)"
+        )
     
     for event in events:
         if event not in valid_events:
@@ -40,7 +57,8 @@ def subscribe_to_delivery_webhooks(
     return {
         "message": "Successfully subscribed to webhook events",
         "webhook_url": webhook_url,
-        "events": events
+        "events": events,
+        "note": "localhost URLs are supported for development. Use production URLs when deployed."
     }
 
 @router.get("/deliveries/subscribers")
