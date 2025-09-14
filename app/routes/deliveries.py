@@ -68,7 +68,8 @@ def assign_delivery(
     db.refresh(delivery)
     # Broadcast assignment
     import asyncio
-    asyncio.create_task(manager.broadcast({
+    from app.routes.websockets import manager as websocket_manager
+    asyncio.create_task(websocket_manager.broadcast({
         "type": "assigned",
         "delivery_id": delivery.id,
         "livreur_id": livreur.id,
@@ -105,7 +106,8 @@ def update_status(
     db.refresh(delivery)
     # Broadcast status update
     import asyncio
-    asyncio.create_task(manager.broadcast({
+    from app.routes.websockets import manager as websocket_manager
+    asyncio.create_task(websocket_manager.broadcast({
         "type": "status_update",
         "delivery_id": delivery.id,
         "status": delivery.statut.value
@@ -165,13 +167,45 @@ def cancel_delivery(
     
     # Broadcast cancellation
     import asyncio
-    asyncio.create_task(manager.broadcast({
+    from app.routes.websockets import manager as websocket_manager
+    asyncio.create_task(websocket_manager.broadcast({
         "type": "cancelled",
         "delivery_id": delivery.id,
         "status": delivery.statut.value
     }))
     
     return {"message": "Livraison annulée avec succès"}
+
+@router.get("/{delivery_id}/status")
+def get_delivery_status(
+    delivery_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get real-time status of specific delivery"""
+    delivery = db.query(Delivery).filter(Delivery.id == delivery_id).first()
+    if not delivery:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Livraison introuvable"
+        )
+    
+    # Check permissions
+    is_client = current_user.role == UserRole.CLIENT and delivery.client_id == current_user.id
+    is_livreur = current_user.role == UserRole.LIVREUR and delivery.livreur_id == current_user.id
+    is_manager = current_user.role in [UserRole.MANAGER, UserRole.ADMIN]
+    
+    if not (is_client or is_livreur or is_manager):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accès refusé"
+        )
+    
+    return {
+        "delivery_id": delivery.id,
+        "status": delivery.statut.value,
+        "updated_at": delivery.updated_at
+    }
 
 @router.get("/history", response_model=list[DeliverySchema])
 def get_history(

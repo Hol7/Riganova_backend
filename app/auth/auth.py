@@ -23,8 +23,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
-def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
-    user = db.query(User).filter(User.email == email).first()
+def authenticate_user(db: Session, telephone: str, password: str) -> Optional[User]:
+    user = db.query(User).filter(User.telephone == telephone).first()
     if not user or not verify_password(password, user.mot_de_passe):
         return None
     return user
@@ -58,6 +58,7 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
     return current_user
 
 async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != "admin":
+    from app.models import UserRole
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return current_user

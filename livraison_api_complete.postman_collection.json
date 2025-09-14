@@ -24,7 +24,7 @@
           }
         },
         {
-          "name": "Login",
+          "name": "Login (OAuth2 - Swagger Compatible)",
           "event": [
             {
               "listen": "test",
@@ -46,11 +46,38 @@
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "username", "value": "john@example.com" },
+                { "key": "username", "value": "0600000000" },
                 { "key": "password", "value": "strongpassword" }
               ]
             },
             "url": { "raw": "{{base_url}}/auth/token", "host": ["{{base_url}}"], "path": ["auth", "token"] }
+          }
+        },
+        {
+          "name": "Login (JSON)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', response.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telephone\": \"0600000000\",\n  \"mot_de_passe\": \"strongpassword\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
           }
         }
       ]
