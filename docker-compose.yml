@@ -108,14 +108,14 @@ services:
     labels:
       - "traefik.enable=true"
       # 🔹 Router & service uniques
-      - "traefik.http.routers.riganova.rule=Host(`back-riganova.taxis-forfait.com`)"
-      - "traefik.http.routers.riganova.entrypoints=websecure"
-      - "traefik.http.routers.riganova.tls.certresolver=letsencrypt"
-      - "traefik.http.services.riganova.loadbalancer.server.port=8040"
+      - "traefik.http.routers.riganova_backend-api.rule=Host(`back-riganova.taxis-forfait.com`)"
+      - "traefik.http.routers.riganova_backend-api.entrypoints=websecure"
+      - "traefik.http.routers.riganova_backend-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.riganova_backend-api.loadbalancer.server.port=8040"
       # 🔹 Redirection HTTP → HTTPS
-      - "traefik.http.routers.riganova-http.rule=Host(`back-riganova.taxis-forfait.com`)"
-      - "traefik.http.routers.riganova-http.entrypoints=web"
-      - "traefik.http.routers.riganova-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.riganova_backend-api-http.rule=Host(`back-riganova.taxis-forfait.com`)"
+      - "traefik.http.routers.riganova_backend-api-http.entrypoints=web"
+      - "traefik.http.routers.riganova_backend-api-http.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
 
   # Admin PostgreSQL (optionnel)
