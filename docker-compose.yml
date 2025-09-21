@@ -107,12 +107,12 @@ services:
     labels:
       - "traefik.enable=true"
       # 🔹 Traefik Router HTTPS
-      - "traefik.http.routers.riganova.rule=Host(`back-riganova.taxis-forfait.com`)"
+      - "traefik.http.routers.riganova.rule=Host(`riganovaapi.taxis-forfait.com`)"
       - "traefik.http.routers.riganova.entrypoints=websecure"
       - "traefik.http.routers.riganova.tls.certresolver=letsencrypt"
       - "traefik.http.services.riganova.loadbalancer.server.port=8040"
       # 🔹 HTTP → HTTPS redirection
-      - "traefik.http.routers.riganova-http.rule=Host(`back-riganova.taxis-forfait.com`)"
+      - "traefik.http.routers.riganova-http.rule=Host(`riganovaapi.taxis-forfait.com`)"
       - "traefik.http.routers.riganova-http.entrypoints=web"
       - "traefik.http.routers.riganova-http.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
