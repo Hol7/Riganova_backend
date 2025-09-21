@@ -94,7 +94,7 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
       BREVO_API_KEY: your-brevo-api-key-here
     ports:
-      - "8040:8040"
+      - "8040:8000"
     depends_on:
       db:
         condition: service_healthy
