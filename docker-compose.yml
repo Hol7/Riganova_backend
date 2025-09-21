@@ -59,9 +59,8 @@
 #   postgres_data:
 
 
-
 services:
-  # Base de données PostgreSQL
+  # 🗄 Base de données PostgreSQL
   db:
     image: postgres:15
     container_name: livraison_db
@@ -69,10 +68,11 @@ services:
       POSTGRES_USER: livraison_user
       POSTGRES_PASSWORD: livraison_pass
       POSTGRES_DB: livraison_db
+    # 🔹 Volume interne dédié uniquement à ce projet
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - livraison_pgdata:/var/lib/postgresql/data
     ports:
-      - "5440:5432"   # 🔹 Port hôte modifié pour éviter conflit
+      - "5440:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U livraison_user -d livraison_db"]
       interval: 10s
@@ -81,21 +81,20 @@ services:
     networks:
       - traefik
 
-  # API FastAPI
+  # ⚡ API FastAPI
   api:
     build: .
     container_name: livraison_api
     env_file:
       - .env
     environment:
-      # 🔹 On garde 5432 pour la communication interne docker (db:5432)
       DATABASE_URL: postgresql://livraison_user:livraison_pass@db:5432/livraison_db
       SECRET_KEY: your-super-secret-key-change-this-in-production
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
       BREVO_API_KEY: your-brevo-api-key-here
     ports:
-      - "8040:8040"   # 🔹 Port hôte modifié pour éviter conflit
+      - "8040:8040"
     depends_on:
       db:
         condition: service_healthy
@@ -107,18 +106,18 @@ services:
       - traefik
     labels:
       - "traefik.enable=true"
-      # 🔹 Router & service uniques
+      # 🔹 Traefik Router HTTPS
       - "traefik.http.routers.riganova.rule=Host(`back-riganova.taxis-forfait.com`)"
       - "traefik.http.routers.riganova.entrypoints=websecure"
       - "traefik.http.routers.riganova.tls.certresolver=letsencrypt"
       - "traefik.http.services.riganova.loadbalancer.server.port=8040"
-      # 🔹 Redirection HTTP → HTTPS
+      # 🔹 HTTP → HTTPS redirection
       - "traefik.http.routers.riganova-http.rule=Host(`back-riganova.taxis-forfait.com`)"
       - "traefik.http.routers.riganova-http.entrypoints=web"
       - "traefik.http.routers.riganova-http.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
 
-  # Admin PostgreSQL (optionnel)
+  # 📊 Admin PostgreSQL (optionnel)
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: livraison_pgadmin
@@ -126,7 +125,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@livraison.com
       PGADMIN_DEFAULT_PASSWORD: admin123
     ports:
-      - "5052:80"    # 🔹 Port modifié (5050 est déjà utilisé ailleurs)
+      - "5052:80"
     depends_on:
       - db
     networks:
@@ -134,9 +133,12 @@ services:
     profiles:
       - admin
 
+# ✅ Volume isolé pour ce projet uniquement
 volumes:
-  postgres_data:
+  livraison_pgdata:
 
+# 🔗 Réseau Traefik externe (doit déjà exister)
 networks:
   traefik:
     external: true
+
