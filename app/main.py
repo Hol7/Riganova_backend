@@ -14,11 +14,19 @@ app = FastAPI(
     description="API pour l'application de livraison à moto",
     version="1.0.0"
 )
+origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "https://dashboard-riganova.vercel.app/",
+    "http://localhost",
+    "http://localhost:3000",
+]
 
 # Configuration CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En production, spécifier les domaines autorisés
+    allow_origins=origins,
+    # allow_origins=["*"],  # En production, spécifier les domaines autorisés
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

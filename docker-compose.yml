@@ -1,4 +1,65 @@
 
+# services:
+#   # Base de données PostgreSQL
+#   db:
+#     image: postgres:15
+#     container_name: livraison_db
+#     environment:
+#       POSTGRES_USER: livraison_user
+#       POSTGRES_PASSWORD: livraison_pass
+#       POSTGRES_DB: livraison_db
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     ports:
+#       - "5432:5432"
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U livraison_user -d livraison_db"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+#   # API FastAPI
+#   api:
+#     build: .
+#     env_file:
+#       - .env
+#     container_name: livraison_api
+#     environment:
+#       # DATABASE_URL: postgresql://livraison_user:livraison_pass@db:5432/livraison_db
+#       DATABASE_URL: postgresql://livraison_user:livraison_pass@db:5432/livraison_db
+#       SECRET_KEY: your-super-secret-key-change-this-in-production
+#       ALGORITHM: HS256
+#       ACCESS_TOKEN_EXPIRE_MINUTES: 30
+#       BREVO_API_KEY: your-brevo-api-key-here
+#     ports:
+#       - "8000:8000"
+#     depends_on:
+#       db:
+#         condition: service_healthy
+#     volumes:
+#       - ./app:/app/app
+#       - ./alembic:/app/alembic
+#     restart: unless-stopped
+
+#   # Admin PostgreSQL (optionnel)
+#   pgadmin:
+#     image: dpage/pgadmin4:latest
+#     container_name: livraison_pgadmin
+#     environment:
+#       PGADMIN_DEFAULT_EMAIL: admin@livraison.com
+#       PGADMIN_DEFAULT_PASSWORD: admin123
+#     ports:
+#       - "5050:80"
+#     depends_on:
+#       - db
+#     profiles:
+#       - admin
+
+# volumes:
+#   postgres_data:
+
+
+
 services:
   # Base de données PostgreSQL
   db:
@@ -11,28 +72,30 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5440:5432"   # 🔹 Port hôte modifié pour éviter conflit
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U livraison_user -d livraison_db"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - traefik
 
   # API FastAPI
   api:
     build: .
+    container_name: livraison_api
     env_file:
       - .env
-    container_name: livraison_api
     environment:
-      # DATABASE_URL: postgresql://livraison_user:livraison_pass@db:5432/livraison_db
+      # 🔹 On garde 5432 pour la communication interne docker (db:5432)
       DATABASE_URL: postgresql://livraison_user:livraison_pass@db:5432/livraison_db
       SECRET_KEY: your-super-secret-key-change-this-in-production
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
       BREVO_API_KEY: your-brevo-api-key-here
     ports:
-      - "8000:8000"
+      - "8040:8040"   # 🔹 Port hôte modifié pour éviter conflit
     depends_on:
       db:
         condition: service_healthy
@@ -40,6 +103,20 @@ services:
       - ./app:/app/app
       - ./alembic:/app/alembic
     restart: unless-stopped
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      # 🔹 Router & service uniques
+      - "traefik.http.routers.riganova.rule=Host(`back-riganova.taxis-forfait.com`)"
+      - "traefik.http.routers.riganova.entrypoints=websecure"
+      - "traefik.http.routers.riganova.tls.certresolver=letsencrypt"
+      - "traefik.http.services.riganova.loadbalancer.server.port=8040"
+      # 🔹 Redirection HTTP → HTTPS
+      - "traefik.http.routers.riganova-http.rule=Host(`back-riganova.taxis-forfait.com`)"
+      - "traefik.http.routers.riganova-http.entrypoints=web"
+      - "traefik.http.routers.riganova-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
 
   # Admin PostgreSQL (optionnel)
   pgadmin:
@@ -49,11 +126,17 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@livraison.com
       PGADMIN_DEFAULT_PASSWORD: admin123
     ports:
-      - "5050:80"
+      - "5052:80"    # 🔹 Port modifié (5050 est déjà utilisé ailleurs)
     depends_on:
       - db
+    networks:
+      - traefik
     profiles:
       - admin
 
 volumes:
   postgres_data:
+
+networks:
+  traefik:
+    external: true
