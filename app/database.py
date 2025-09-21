@@ -6,7 +6,7 @@ from sqlalchemy.exc import OperationalError
 import time
 
 SQLALCHEMY_DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://livraison_user:livraison_pass@db:5432/livraison_db"
+    "DATABASE_URL", "postgresql://livraison_user:livraison_pass@db:5440/livraison_db"
 )
 
 def create_retry_engine(url, max_retries=5, delay=3):
