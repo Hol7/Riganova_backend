@@ -18,6 +18,7 @@ origins = [
     "http://localhost.tiangolo.com",
     "https://localhost.tiangolo.com",
     "https://dashboard-riganova.vercel.app/",
+    "https://riganovaapi.taxis-forfait.com/"
     "http://localhost",
     "http://localhost:3000",
 ]
