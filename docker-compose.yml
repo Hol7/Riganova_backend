@@ -110,7 +110,7 @@ services:
       - "traefik.http.routers.riganova.rule=Host(`riganovaapi.taxis-forfait.com`)"
       - "traefik.http.routers.riganova.entrypoints=websecure"
       - "traefik.http.routers.riganova.tls.certresolver=letsencrypt"
-      - "traefik.http.services.riganova.loadbalancer.server.port=8040"
+      - "traefik.http.services.riganova.loadbalancer.server.port=8000"
       # 🔹 HTTP → HTTPS redirection
       - "traefik.http.routers.riganova-http.rule=Host(`riganovaapi.taxis-forfait.com`)"
       - "traefik.http.routers.riganova-http.entrypoints=web"
