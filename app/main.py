@@ -18,9 +18,10 @@ origins = [
     "http://localhost.tiangolo.com",
     "https://localhost.tiangolo.com",
     "https://dashboard-riganova.vercel.app/",
-    "https://riganovaapi.taxis-forfait.com/"
+    "https://dashboard-riganova.vercel.app",
     "http://localhost",
     "http://localhost:3000",
+    "http://localhost:8000",
 ]
 
 # Configuration CORS
