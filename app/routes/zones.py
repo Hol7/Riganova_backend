@@ -31,6 +31,14 @@ def list_zones(
     zones = db.query(DeliveryZone).filter(DeliveryZone.is_active == True).all()
     return zones
 
+@router.get("/public", response_model=list[Zone])
+def list_zones_public(
+    db: Session = Depends(get_db)
+):
+    """Public endpoint: list all active delivery zones without authentication"""
+    zones = db.query(DeliveryZone).filter(DeliveryZone.is_active == True).all()
+    return zones
+
 @router.get("/{zone_id}", response_model=Zone)
 def get_zone(
     zone_id: int,
