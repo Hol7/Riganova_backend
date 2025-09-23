@@ -22,6 +22,7 @@ origins = [
     "http://localhost",
     "http://localhost:3000",
     "http://localhost:8000",
+    "http://localhost:8081"
 ]
 
 # Configuration CORS
